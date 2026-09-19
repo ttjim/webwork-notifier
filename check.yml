@@ -1,0 +1,49 @@
+name: WebWork due date check
+
+on:
+  schedule:
+    # Runs daily at 13:00 UTC (~7-8am Central depending on DST)
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Write storage_state.json from secret
+        run: echo "$STORAGE_STATE" > storage_state.json
+        env:
+          STORAGE_STATE: ${{ secrets.STORAGE_STATE }}
+
+      - name: Restore previous state.json
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: webwork-state-${{ github.run_id }}
+          restore-keys: webwork-state-
+
+      - name: Run notifier
+        run: python scrape_and_notify.py
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          ERAIDER_USERNAME: ${{ secrets.ERAIDER_USERNAME }}
+          ERAIDER_PASSWORD: ${{ secrets.ERAIDER_PASSWORD }}
+
+      - name: Save updated state.json
+        uses: actions/cache/save@v4
+        with:
+          path: state.json
+          key: webwork-state-${{ github.run_id }}
