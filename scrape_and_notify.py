@@ -150,6 +150,10 @@ def check_and_notify():
         print("No assignments parsed — check parse_assignments() selectors.")
         return
 
+    print(f"Parsed {len(assignments)} assignment(s):")
+    for name, due in sorted(assignments.items(), key=lambda kv: kv[1]):
+        print(f"  - {name}: due {due.strftime('%Y-%m-%d %I:%M %p')}")
+
     state = load_state()
     now = datetime.now()
     reminder_days = CONFIG["reminder_days_before"]
